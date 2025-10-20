@@ -78,6 +78,22 @@
             <h2>Your Custom Emojis</h2>
             <ul id="emoji-list"></ul>
         </div>
+
+        <div class="card">
+            <h2>AI Settings 🧠</h2>
+            <div class="form-grid">
+                <div>
+                    <label for="ai-model">Select AI Model</label>
+                    <select id="ai-model" class="btn" style="width: 100%; text-align: left; background-color: #e2e8f0; color: #1a202c;">
+                        <option value="deepseek/deepseek-chat:free">DeepSeek Chat (Default)</option>
+                        <option value="openai/gpt-4o:free">OpenAI GPT-4o</option>
+                        <option value="google/gemma-7b-it:free">Google Gemma 7B</option>
+                        <option value="meta-llama/llama-3-8b-instruct:free">Meta Llama 3 8B</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
     </div>
     <script src="options.js"></script>
 </body>

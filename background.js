@@ -1,10 +1,44 @@
-// background.js - v17.0 - Legacy Edition (No Offscreen)
+// background.js - v17.2 - Combined Install Listener
+
+const OFFSCREEN_DOCUMENT_PATH = '/offscreen.html';
+
+// A global promise to avoid concurrency issues
+let creatingOffscreenDocument;
+
+// With Manifest V3, we need to create an offscreen document to run the AI model.
+async function getOffscreenDocument() {
+    if (await chrome.offscreen.hasDocument()) {
+        return;
+    }
+    if (creatingOffscreenDocument) {
+        await creatingOffscreenDocument;
+    } else {
+        creatingOffscreenDocument = chrome.offscreen.createDocument({
+            url: OFFSCREEN_DOCUMENT_PATH,
+            reasons: ['FETCH'],
+            justification: 'To run AI model without interrupting the service worker.',
+        });
+        await creatingOffscreenDocument;
+        creatingOffscreenDocument = null;
+    }
+}
 
 chrome.runtime.onInstalled.addListener(() => {
+    // Create context menu
     chrome.contextMenus.create({
         id: "ask-imoji-ai",
         title: "Ask Imoji about '%s'",
         contexts: ["selection"]
+    });
+
+    // Set default values on installation
+    chrome.storage.sync.get(['emojis', 'isEnabled', 'aiModel'], (result) => {
+        if (result.isEnabled === undefined) chrome.storage.sync.set({ isEnabled: true });
+        if (result.aiModel === undefined) chrome.storage.sync.set({ aiModel: 'deepseek/deepseek-chat:free' });
+        if (!result.emojis) {
+            const defaultEmojis = { ':lol:': '😂', ':heart:': '❤️', ':thumbsup:': '👍' };
+            chrome.storage.sync.set({ emojis: defaultEmojis });
+        }
     });
 });
 
@@ -19,53 +53,14 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getAiResponse") {
-        const YOUR_SERVER_URL = "https://imoji-server-production.up.railway.app/get-ai-response";
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-        chrome.storage.sync.get('aiModel', ({ aiModel }) => {
-            fetch(YOUR_SERVER_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    prompt: request.prompt, 
-                    model: aiModel || 'deepseek/deepseek-chat:free' 
-                }),
-                signal: controller.signal
-            })
-            .then(response => response.json())
-            .then(data => {
-                clearTimeout(timeoutId);
-                if (data.error) {
-                    sendResponse({ success: false, error: data.error.message });
-                } else if (data.choices && data.choices[0].message) {
-                    sendResponse({ success: true, text: data.choices[0].message.content });
-                } else {
-                    sendResponse({ success: false, error: 'Unknown AI response format.' });
-                }
-            })
-            .catch(error => {
-                clearTimeout(timeoutId);
-                if (error.name === 'AbortError') {
-                    sendResponse({ success: false, error: 'Server took too long to respond (30s). Please retry.' });
-                } else {
-                    sendResponse({ success: false, error: 'Failed to connect to the imoji server.' });
-                }
+        (async () => {
+            await getOffscreenDocument();
+            const response = await chrome.runtime.sendMessage({
+                ...request,
+                target: 'offscreen'
             });
-        });
+            sendResponse(response);
+        })();
         return true; // Keep the message channel open for the async response
     }
 });
-
-// --- ON-INSTALL DEFAULTS ---
-chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.sync.get(['emojis', 'isEnabled', 'aiModel'], (result) => {
-        if (result.isEnabled === undefined) chrome.storage.sync.set({ isEnabled: true });
-        if (result.aiModel === undefined) chrome.storage.sync.set({ aiModel: 'deepseek/deepseek-chat:free' });
-        if (!result.emojis) {
-            const defaultEmojis = { ':lol:': '😂', ':heart:': '❤️', ':thumbsup:': '👍' };
-            chrome.storage.sync.set({ emojis: defaultEmojis });
-        }
-    });
-});
-

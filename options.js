@@ -1,4 +1,4 @@
-// options.js - v12.0 - Redesigned and Optimized
+// options.js - v17.1 - AI Model Selection
 
 document.addEventListener('DOMContentLoaded', () => {
     const addForm = document.getElementById('add-emoji-form');
@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const emojiInput = document.getElementById('emoji');
     const emojiList = document.getElementById('emoji-list');
     const statusDiv = document.getElementById('status');
+    const aiModelSelect = document.getElementById('ai-model');
     let statusTimeout;
 
     function showStatus() {
@@ -20,6 +21,21 @@ document.addEventListener('DOMContentLoaded', () => {
         chrome.storage.sync.set({ emojis }, () => {
             showStatus();
             renderEmojiList();
+        });
+    }
+
+    function loadAiModel() {
+        chrome.storage.sync.get('aiModel', (data) => {
+            if (data.aiModel) {
+                aiModelSelect.value = data.aiModel;
+            }
+        });
+    }
+
+    function saveAiModel() {
+        const newModel = aiModelSelect.value;
+        chrome.storage.sync.set({ aiModel: newModel }, () => {
+            showStatus();
         });
     }
 
@@ -71,6 +87,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    renderEmojiList();
-});
+    aiModelSelect.addEventListener('change', saveAiModel);
 
+    renderEmojiList();
+    loadAiModel();
+});
