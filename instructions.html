@@ -1,62 +1,376 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>imoji Instructions</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>imoji Enterprise Manual</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        :root {
+            --primary: #6366f1;
+            --accent: #a5b4fc;
+            --dark: #020617;
+            --glass: rgba(15, 23, 42, 0.6);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
+            background-color: var(--dark);
+            color: white;
             font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa; color: #212529; line-height: 1.7;
-            margin: 0; padding: 40px;
+            overflow-x: hidden;
+            opacity: 0;
+            animation: fadeIn 1s ease-out forwards;
         }
+
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* --- The Canvas Engine --- */
+        canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+        }
+
+        /* --- Layout --- */
+        .hero-section {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 900;
+            letter-spacing: -2px;
+            background: linear-gradient(to bottom right, #fff, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            text-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideUp 1s cubic-bezier(0.2, 1, 0.3, 1) 0.5s forwards;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            max-width: 600px;
+            line-height: 1.6;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUp 1s cubic-bezier(0.2, 1, 0.3, 1) 0.8s forwards;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--accent);
+            opacity: 0.7;
+            animation: pulse 2s infinite;
+        }
+
+        /* --- Cards --- */
         .container {
-            max-width: 700px; margin: 0 auto; background-color: white;
-            padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 100px 20px;
+            z-index: 10;
+            position: relative;
         }
-        h1, h2, h3 { border-bottom: 1px solid #e9ecef; padding-bottom: 10px; color: #111827; font-weight: 600; }
-        h1 { font-size: 2.2em; }
-        h2 { font-size: 1.6em; margin-top: 40px; }
-        h3 { font-size: 1.2em; margin-top: 24px; border-bottom: none; }
-        p, li { font-size: 1.1em; color: #374151; }
-        code {
-            background-color: #eef2ff; color: #4338ca; padding: 4px 8px;
-            border-radius: 6px; font-family: 'SF Mono', 'Courier New', monospace;
+
+        .feature-card {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 24px;
+            padding: 60px;
+            margin-bottom: 80px;
+            display: grid;
+            grid-template-columns: 1fr 0.8fr;
+            gap: 60px;
+            align-items: center;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
-        .highlight { color: #4f46e5; font-weight: bold; }
-        .new-feature {
-            background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;
-            padding: 20px; border-radius: 8px; margin-top: 20px;
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .feature-card.reverse { direction: rtl; }
+        .feature-card.reverse .text-content { direction: ltr; }
+
+        .text-content h2 {
+            font-family: 'Orbitron';
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        .text-content p {
+            color: #cbd5e1;
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+
+        .visual-box {
+            height: 250px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            border: 1px dashed rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .visual-box::after {
+            content: ''; position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+            animation: rotate 10s linear infinite;
+        }
+
+        /* --- Code Pill --- */
+        .code {
+            display: inline-block;
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            margin-top: 16px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        /* --- Credits --- */
+        .credits {
+            text-align: center;
+            padding: 150px 20px;
+            position: relative;
+        }
+        
+        .credits h3 {
+            font-size: 0.9rem; letter-spacing: 4px; text-transform: uppercase;
+            color: #64748b; margin-bottom: 20px;
+        }
+
+        .name {
+            font-family: 'Orbitron';
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 900;
+            background: linear-gradient(to bottom, white, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .handle { font-size: 1.5rem; color: var(--primary); font-weight: 600; }
+        .copy { margin-top: 80px; color: #475569; font-size: 0.9rem; }
+
+        /* --- Animations --- */
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 0.7; transform: translateY(0); } 50% { opacity: 0.3; transform: translateY(10px); } }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        @media (max-width: 900px) {
+            .feature-card { grid-template-columns: 1fr; gap: 40px; padding: 40px; text-align: center; }
+            .feature-card.reverse { direction: ltr; }
         }
     </style>
 </head>
 <body>
+
+    <canvas id="neural-canvas"></canvas>
+
+    <section class="hero-section">
+        <h1>imoji v20.0</h1>
+        <p class="subtitle">The Enterprise Workspace Intelligence System.<br>Secure. Fast. Intelligent.</p>
+        <div class="scroll-indicator">Initialize System</div>
+    </section>
+
     <div class="container">
-        <h1>imoji Help & Instructions 🚀 (v14.0)</h1>
-
-        <h2>How to Use the AI Assistant</h2>
-
-        <div class="new-feature">
-            <h3>⭐ New & Recommended: The Right-Click Menu</h3>
-            <p>The best way to use the AI! Simply <span class="highlight">highlight any text</span> on any website, <span class="highlight">right-click</span> it, and choose <span class="highlight">"Ask Imoji about..."</span> from the menu. A powerful popup will appear with your answer!</p>
-            <ul>
-                <li>If the server is sleeping, you'll see an error. Just click the <span class="highlight">"Retry"</span> button to wake it up!</li>
-                <li>When the answer appears, use the <span class="highlight">"Copy Text"</span> button to save it to your clipboard instantly.</li>
-            </ul>
+        <!-- Feature 1 -->
+        <div class="feature-card">
+            <div class="text-content">
+                <h2>Neural Intelligence</h2>
+                <p>Our context-aware AI engine is embedded directly into your workflow. Simply highlight any text, right-click, and engage the <strong>"Ask imoji Intelligence"</strong> protocol.</p>
+                <div class="code">Protocol: Right-Click > Ask imoji</div>
+            </div>
+            <div class="visual-box">🧠</div>
         </div>
 
-        <h3>Alternative: The Text Command</h3>
-        <p>In any text box, you can still type <code>:ai</code>, a space, your question, and then press the <span class="highlight">spacebar twice</span> at the end.</p>
-        <p><b>Example:</b> <code>:ai tell me a fun fact about Japan&nbsp;&nbsp;</code></p>
-        
-        <h2>How to Use Emoji Shortcodes</h2>
-        <p>Type an emoji shortcode (like <code>:lol:</code>) and press the <b>spacebar</b> once.</p>
-        <p><b>Example:</b> <code>:heart: </code> will become ❤️.</p>
+        <!-- Feature 2 -->
+        <div class="feature-card reverse">
+            <div class="text-content">
+                <h2>Velocity Input</h2>
+                <p>Expand data packets instantly. The system detects shortcodes and replaces them with rich media assets in < 10ms.</p>
+                <div class="code">:rocket:  →  🚀</div>
+            </div>
+            <div class="visual-box">⚡</div>
+        </div>
 
-        <h2>Managing Your Emojis</h2>
-        <p>Click the imoji icon in your Chrome toolbar, then click the <b>"Manage Custom Emojis"</b> button to open your settings page.</p>
-
+        <!-- Feature 3 -->
+        <div class="feature-card">
+            <div class="text-content">
+                <h2>System Telemetry</h2>
+                <p>Access real-time analytics on productivity gains. The centralized dashboard provides insight into query volume and time-saved metrics.</p>
+            </div>
+            <div class="visual-box">📊</div>
+        </div>
     </div>
+
+    <section class="credits">
+        <h3>Architected & Engineered By</h3>
+        <div class="name">R H A Ashan Imalka</div>
+        <div class="handle">( SCXR )</div>
+        <div class="copy">© 2025 Enterprise Division. All Rights Reserved.</div>
+    </section>
+
+    <script>
+        /**
+         * Custom High-Performance Particle Engine
+         * Zero external dependencies. Pure Mathematics.
+         */
+        const canvas = document.getElementById('neural-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let particles = [];
+        
+        // Configuration
+        const PARTICLE_COUNT = 80;
+        const CONNECTION_DISTANCE = 150;
+        const MOUSE_RADIUS = 250;
+
+        let mouse = { x: null, y: null };
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2 + 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Bounce off edges
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+
+                // Mouse interaction
+                if (mouse.x != null) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < MOUSE_RADIUS) {
+                        const forceDirectionX = dx / distance;
+                        const forceDirectionY = dy / distance;
+                        const force = (MOUSE_RADIUS - distance) / MOUSE_RADIUS;
+                        const directionX = forceDirectionX * force * 0.6;
+                        const directionY = forceDirectionY * force * 0.6;
+                        
+                        this.vx += directionX;
+                        this.vy += directionY;
+                    }
+                }
+                
+                // Friction to stabilize
+                this.vx *= 0.98; // Higher = slippery, Lower = thick fluid
+                this.vy *= 0.98;
+            }
+
+            draw() {
+                ctx.fillStyle = '#6366f1';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function init() {
+            resize();
+            particles = [];
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Update and draw particles
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                
+                // Draw connections
+                for (let j = i; j < particles.length; j++) {
+                    let dx = particles[i].x - particles[j].x;
+                    let dy = particles[i].y - particles[j].y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+
+                    if (distance < CONNECTION_DISTANCE) {
+                        ctx.beginPath();
+                        // Opacity based on distance
+                        let opacity = 1 - (distance / CONNECTION_DISTANCE);
+                        ctx.strokeStyle = 'rgba(99, 102, 241, ' + opacity * 0.5 + ')';
+                        ctx.lineWidth = 1;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // Event Listeners
+        window.addEventListener('resize', resize);
+        
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+
+        window.addEventListener('mouseleave', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+
+        // Start System
+        init();
+        animate();
+
+    </script>
 </body>
 </html>
-

@@ -1,76 +1,100 @@
-// options.js - v12.0 - Redesigned and Optimized
+// options.js v20.0 - Enterprise Config Manager
 
 document.addEventListener('DOMContentLoaded', () => {
-    const addForm = document.getElementById('add-emoji-form');
-    const shortcodeInput = document.getElementById('shortcode');
-    const emojiInput = document.getElementById('emoji');
-    const emojiList = document.getElementById('emoji-list');
-    const statusDiv = document.getElementById('status');
-    let statusTimeout;
+    const UI = {
+        form: document.getElementById('add-form'),
+        shortcode: document.getElementById('shortcode'),
+        emoji: document.getElementById('emoji'),
+        list: document.getElementById('list'),
+        exportBtn: document.getElementById('export-btn'),
+        importBtn: document.getElementById('import-btn'),
+        fileInput: document.getElementById('file-input')
+    };
 
-    function showStatus() {
-        clearTimeout(statusTimeout);
-        statusDiv.classList.add('show');
-        statusTimeout = setTimeout(() => {
-            statusDiv.classList.remove('show');
-        }, 2000);
-    }
+    // --- CRUD Operations ---
+    async function render() {
+        const data = await chrome.storage.sync.get('emojis');
+        const emojis = data.emojis || {};
+        UI.list.innerHTML = '';
 
-    function saveEmojis(emojis) {
-        chrome.storage.sync.set({ emojis }, () => {
-            showStatus();
-            renderEmojiList();
+        Object.keys(emojis).sort().forEach(key => {
+            const row = document.createElement('div');
+            row.className = 'list-item';
+            row.innerHTML = `
+                <div><span class="code-tag">${key}</span></div>
+                <div style="font-size: 20px;">${emojis[key]}</div>
+                <button class="del-btn" data-key="${key}">Delete</button>
+            `;
+            row.querySelector('.del-btn').onclick = () => deleteItem(key);
+            UI.list.appendChild(row);
         });
     }
 
-    function renderEmojiList() {
-        chrome.storage.sync.get('emojis', (data) => {
-            const emojis = data.emojis || {};
-            emojiList.innerHTML = '';
-            if (Object.keys(emojis).length === 0) {
-                emojiList.innerHTML = '<li>No custom emojis yet. Add one above!</li>';
-                return;
-            }
-            const sortedShortcodes = Object.keys(emojis).sort();
-            for (const shortcode of sortedShortcodes) {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <span class="emoji-item-text">${shortcode} → ${emojis[shortcode]}</span>
-                    <button class="delete-btn" data-shortcode="${shortcode}">Delete</button>
-                `;
-                emojiList.appendChild(li);
-            }
+    async function addItem(code, val) {
+        if (!code.startsWith(':')) code = ':' + code;
+        if (!code.endsWith(':')) code = code + ':';
+        
+        const data = await chrome.storage.sync.get('emojis');
+        const emojis = data.emojis || {};
+        emojis[code] = val;
+        
+        await chrome.storage.sync.set({ emojis });
+        render();
+    }
+
+    async function deleteItem(key) {
+        const data = await chrome.storage.sync.get('emojis');
+        const emojis = data.emojis || {};
+        delete emojis[key];
+        await chrome.storage.sync.set({ emojis });
+        render();
+    }
+
+    // --- Enterprise Import/Export ---
+    function exportConfig() {
+        chrome.storage.sync.get(null, (data) => {
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type : 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `imoji-config-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
         });
     }
 
-    addForm.addEventListener('submit', (e) => {
+    function importConfig(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const config = JSON.parse(e.target.result);
+                if (config.emojis) {
+                    chrome.storage.sync.set(config, () => {
+                        alert('Configuration imported successfully!');
+                        render();
+                    });
+                }
+            } catch (err) {
+                alert('Invalid JSON file');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // --- Listeners ---
+    UI.form.addEventListener('submit', (e) => {
         e.preventDefault();
-        let shortcode = shortcodeInput.value.trim();
-        const emoji = emojiInput.value.trim();
-        if (!shortcode || !emoji) return;
-        if (!shortcode.startsWith(':')) shortcode = `:${shortcode}`;
-        if (!shortcode.endsWith(':')) shortcode = `${shortcode}:`;
-
-        chrome.storage.sync.get('emojis', (data) => {
-            const emojis = data.emojis || {};
-            emojis[shortcode] = emoji;
-            saveEmojis(emojis);
-            addForm.reset();
-            shortcodeInput.focus();
-        });
-    });
-
-    emojiList.addEventListener('click', (e) => {
-        if (e.target.classList.contains('delete-btn')) {
-            const shortcodeToDelete = e.target.dataset.shortcode;
-            chrome.storage.sync.get('emojis', (data) => {
-                const emojis = data.emojis || {};
-                delete emojis[shortcodeToDelete];
-                saveEmojis(emojis);
-            });
+        if(UI.shortcode.value && UI.emoji.value) {
+            addItem(UI.shortcode.value.trim(), UI.emoji.value.trim());
+            UI.form.reset();
         }
     });
 
-    renderEmojiList();
-});
+    UI.exportBtn.onclick = exportConfig;
+    UI.importBtn.onclick = () => UI.fileInput.click();
+    UI.fileInput.onchange = importConfig;
 
+    render();
+});
